@@ -660,30 +660,4 @@ This project was developed for SSPU Hackathon 2025. For contributions or issues,
 
 MIT License - See LICENSE file for details
 
-## Support
-
-For technical support or queries:
-- Email: support@farmview-ai.example.com
-- Documentation: /docs
-- API Documentation: http://localhost:8000/docs (FastAPI)
-
-## Version History
-
-- v1.0.0 (2025-01-01) - Initial release
-  - Complete satellite analysis pipeline
-  - ML-based property verification
-  - GeoAI crop intelligence
-  - Automated insurance claims
-  - Weather alert system
-
-## Acknowledgments
-
-- Sentinel Hub for satellite imagery API
-- Google Gemini for AI capabilities
-- OpenWeather for weather data
-- MongoDB Atlas for cloud database
-- TensorFlow.js for ML capabilities
-
----
-
 Built with dedication for transforming agriculture through technology.
