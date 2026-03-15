@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheck, FaTimes, FaPlus, FaTrash, FaEdit, FaFlag, FaCalendar, FaTasks } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function FarmTodo() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export default function FarmTodo() {
       }
     } catch (error) {
       console.error('Fetch todos error:', error);
-      toast.error('Failed to load tasks');
+      toast.error(t('farmTodo.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,7 @@ export default function FarmTodo() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      toast.error('Task title is required');
+      toast.error(t('farmTodo.taskRequired'));
       return;
     }
 
@@ -53,21 +55,21 @@ export default function FarmTodo() {
         const response = await api.put(`/todos/${editingTodo._id}`, formData);
         if (response.data?.success) {
           setTodos(todos.map(t => t._id === editingTodo._id ? response.data.data : t));
-          toast.success('Task updated!');
+          toast.success(t('farmTodo.taskUpdated'));
         }
       } else {
         // Create new todo
         const response = await api.post('/todos', formData);
         if (response.data?.success) {
           setTodos([response.data.data, ...todos]);
-          toast.success('Task added!');
+          toast.success(t('farmTodo.taskAdded'));
         }
       }
       
       resetForm();
     } catch (error) {
       console.error('Submit todo error:', error);
-      toast.error('Failed to save task');
+      toast.error(t('farmTodo.failedSave'));
     }
   };
 
@@ -79,24 +81,24 @@ export default function FarmTodo() {
       
       if (response.data?.success) {
         setTodos(todos.map(t => t._id === todo._id ? response.data.data : t));
-        toast.success(todo.completed ? 'Task reopened' : '🎉 Task completed!');
+        toast.success(todo.completed ? t('farmTodo.taskReopened') : t('farmTodo.taskCompleted'));
       }
     } catch (error) {
       console.error('Toggle todo error:', error);
-      toast.error('Failed to update task');
+      toast.error(t('farmTodo.failedUpdate'));
     }
   };
 
   const deleteTodo = async (id) => {
-    if (!confirm('Delete this task?')) return;
+    if (!confirm(t('farmTodo.deleteConfirm'))) return;
     
     try {
       await api.delete(`/todos/${id}`);
       setTodos(todos.filter(t => t._id !== id));
-      toast.success('Task deleted');
+      toast.success(t('farmTodo.taskDeleted'));
     } catch (error) {
       console.error('Delete todo error:', error);
-      toast.error('Failed to delete task');
+      toast.error(t('farmTodo.failedDelete'));
     }
   };
 
@@ -210,8 +212,8 @@ export default function FarmTodo() {
                     <FaTasks className="text-xl" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">Farm Tasks</h3>
-                    <p className="text-xs text-blue-100">Manage your daily activities</p>
+                    <h3 className="font-bold text-lg">{t('farmTodo.title')}</h3>
+                    <p className="text-xs text-blue-100">{t('farmTodo.subtitle')}</p>
                   </div>
                 </div>
                 <motion.button
@@ -228,11 +230,11 @@ export default function FarmTodo() {
               <div className="flex space-x-2 text-xs">
                 <div className="flex-1 bg-white/20 rounded-lg p-2 text-center">
                   <div className="font-bold text-lg">{pendingTasks}</div>
-                  <div className="text-blue-100">Pending</div>
+                  <div className="text-blue-100">{t('farmTodo.pending')}</div>
                 </div>
                 <div className="flex-1 bg-white/20 rounded-lg p-2 text-center">
                   <div className="font-bold text-lg">{completedTasks}</div>
-                  <div className="text-blue-100">Completed</div>
+                  <div className="text-blue-100">{t('farmTodo.completed')}</div>
                 </div>
               </div>
             </div>
@@ -247,7 +249,7 @@ export default function FarmTodo() {
                   className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center space-x-2"
                 >
                   <FaPlus />
-                  <span>Add New Task</span>
+                  <span>{t('farmTodo.addTask')}</span>
                 </motion.button>
               </div>
             )}
@@ -264,7 +266,7 @@ export default function FarmTodo() {
                   <form onSubmit={handleSubmit} className="p-3 space-y-2">
                     <input
                       type="text"
-                      placeholder="Task title *"
+                      placeholder={t('farmTodo.taskTitle')}
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -272,7 +274,7 @@ export default function FarmTodo() {
                     />
                     
                     <textarea
-                      placeholder="Description (optional)"
+                      placeholder={t('farmTodo.description')}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -285,9 +287,9 @@ export default function FarmTodo() {
                         onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                         className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       >
-                        <option value="low">🟢 Low Priority</option>
-                        <option value="medium">🟡 Medium Priority</option>
-                        <option value="high">🔴 High Priority</option>
+                        <option value="low">{t('farmTodo.lowPriority')}</option>
+                        <option value="medium">{t('farmTodo.mediumPriority')}</option>
+                        <option value="high">{t('farmTodo.highPriority')}</option>
                       </select>
 
                       <select
@@ -295,13 +297,13 @@ export default function FarmTodo() {
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       >
-                        <option value="irrigation">💧 Irrigation</option>
-                        <option value="fertilizer">🌱 Fertilizer</option>
-                        <option value="pest-control">🐛 Pest Control</option>
-                        <option value="harvesting">🌾 Harvesting</option>
-                        <option value="planting">🌿 Planting</option>
-                        <option value="maintenance">🔧 Maintenance</option>
-                        <option value="other">📋 Other</option>
+                        <option value="irrigation">{t('farmTodo.irrigation')}</option>
+                        <option value="fertilizer">{t('farmTodo.fertilizer')}</option>
+                        <option value="pest-control">{t('farmTodo.pestControl')}</option>
+                        <option value="harvesting">{t('farmTodo.harvesting')}</option>
+                        <option value="planting">{t('farmTodo.planting')}</option>
+                        <option value="maintenance">{t('farmTodo.maintenance')}</option>
+                        <option value="other">{t('farmTodo.other')}</option>
                       </select>
                     </div>
 
@@ -317,14 +319,14 @@ export default function FarmTodo() {
                         type="submit"
                         className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 rounded-lg font-semibold text-sm"
                       >
-                        {editingTodo ? 'Update' : 'Add'} Task
+                        {editingTodo ? t('farmTodo.updateTask') : t('farmTodo.addTaskButton')}
                       </button>
                       <button
                         type="button"
                         onClick={resetForm}
                         className="px-4 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold text-sm"
                       >
-                        Cancel
+                        {t('farmTodo.cancelButton')}
                       </button>
                     </div>
                   </form>
@@ -337,13 +339,13 @@ export default function FarmTodo() {
               {loading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-500 text-sm mt-2">Loading tasks...</p>
+                  <p className="text-gray-500 text-sm mt-2">{t('farmTodo.loading')}</p>
                 </div>
               ) : todos.length === 0 ? (
                 <div className="text-center py-12">
                   <FaTasks className="text-5xl text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No tasks yet</p>
-                  <p className="text-gray-400 text-sm">Add your first farm task!</p>
+                  <p className="text-gray-500">{t('farmTodo.noTasks')}</p>
+                  <p className="text-gray-400 text-sm">{t('farmTodo.addFirstTask')}</p>
                 </div>
               ) : (
                 todos.map((todo) => (

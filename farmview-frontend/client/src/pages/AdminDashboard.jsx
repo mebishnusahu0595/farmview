@@ -180,9 +180,9 @@ export default function AdminDashboard() {
   if (!adminData) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-green-50/30">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 shadow-lg">
         <div className="container mx-auto">
           <div className="flex justify-between items-center">
             <div>
@@ -544,9 +544,9 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
           >
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6">
               <h3 className="text-2xl font-bold">Property Details</h3>
-              <p className="text-blue-100">View property information</p>
+              <p className="text-green-100">View property information</p>
             </div>
 
             <div className="p-6 space-y-6">
@@ -626,9 +626,9 @@ export default function AdminDashboard() {
             className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6">
               <h3 className="text-2xl font-bold">Document Verification</h3>
-              <p className="text-blue-100">Review and verify document details</p>
+              <p className="text-green-100">Review and verify document details</p>
             </div>
 
             {/* Modal Content */}
@@ -752,9 +752,9 @@ export default function AdminDashboard() {
 // StatCard Component
 function StatCard({ icon, title, value, color }) {
   const colors = {
-    blue: 'from-blue-500 to-blue-600',
-    purple: 'from-purple-500 to-purple-600',
-    yellow: 'from-yellow-500 to-orange-500',
+    blue: 'from-green-400 to-emerald-500',
+    purple: 'from-emerald-500 to-teal-600',
+    yellow: 'from-lime-500 to-green-500',
     green: 'from-green-500 to-emerald-600'
   };
 

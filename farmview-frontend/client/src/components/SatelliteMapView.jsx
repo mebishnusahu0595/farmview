@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 
 export default function SatelliteMapView({ propertyId, propertyName, coordinates }) {
+  const { t } = useTranslation();
   const [center, setCenter] = useState({ lat: 0, lng: 0 });
   const [zoom, setZoom] = useState(17);
 
@@ -58,9 +60,9 @@ export default function SatelliteMapView({ propertyId, propertyName, coordinates
               className="px-3 py-2 border-0 focus:outline-none cursor-pointer"
               defaultValue="satellite"
             >
-              <option value="satellite">🛰️ Satellite</option>
-              <option value="hybrid">🗺️ Hybrid</option>
-              <option value="roadmap">🚗 Roadmap</option>
+              <option value="satellite">🛰️ {t('satellite.satellite')}</option>
+              <option value="hybrid">🗺️ {t('satellite.hybrid')}</option>
+              <option value="roadmap">🚗 {t('satellite.roadmap')}</option>
             </select>
           </div>
 
@@ -70,7 +72,7 @@ export default function SatelliteMapView({ propertyId, propertyName, coordinates
             <p className="text-sm text-gray-600">
               📍 Lat: {center.lat.toFixed(6)}, Lng: {center.lng.toFixed(6)}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Zoom: {zoom}x</p>
+            <p className="text-xs text-gray-500 mt-1">{t('satellite.zoom')}: {zoom}x</p>
           </div>
         </div>
       </APIProvider>

@@ -121,15 +121,6 @@ export default function AdminLogin() {
               )}
             </button>
           </form>
-
-          {/* Default Credentials Info */}
-          <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-            <p className="text-xs text-blue-800">
-              <strong>Default Credentials:</strong><br />
-              Username: <code className="bg-blue-200 px-2 py-1 rounded">admin</code><br />
-              Password: <code className="bg-blue-200 px-2 py-1 rounded">Admin@123</code>
-            </p>
-          </div>
         </motion.div>
 
         {/* Back to Home */}

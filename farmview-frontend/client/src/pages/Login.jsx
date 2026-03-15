@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import ReCAPTCHA from 'react-google-recaptcha';
 import api from '../utils/api';
 import { useAuthStore } from '../store/authStore';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaSeedling, FaArrowRight } from 'react-icons/fa';
@@ -13,6 +14,7 @@ export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  const recaptchaRef = useRef(null);
   
   const [formData, setFormData] = useState({
     identifier: '',
@@ -21,18 +23,19 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
 
   const validateForm = () => {
     const newErrors = {};
     
     if (!formData.identifier.trim()) {
-      newErrors.identifier = 'Email or mobile number is required';
+      newErrors.identifier = t('auth.emailOrMobileRequired');
     }
     
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('auth.passwordRequired');
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('auth.passwordMinLength');
     }
     
     setErrors(newErrors);
@@ -52,21 +55,29 @@ export default function Login() {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error(t('auth.fixErrors'));
+      return;
+    }
+
+    if (!recaptchaToken) {
+      toast.error('Please complete the reCAPTCHA verification');
       return;
     }
     
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', formData);
+      const response = await api.post('/auth/login', {
+        ...formData,
+        recaptchaToken
+      });
       const { data } = response.data;
       
       login(data, data.token);
       toast.success(
         <div>
           <p className="font-bold">{t('auth.loginSuccess')}</p>
-          <p className="text-sm">Welcome back, {data.name}!</p>
+          <p className="text-sm">{t('auth.welcomeBackUser')} {data.name}!</p>
         </div>,
         { duration: 4000 }
       );
@@ -76,16 +87,26 @@ export default function Login() {
         navigate('/dashboard');
       }, 300);
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      const message = error.response?.data?.message || t('auth.loginFailed');
       toast.error(message, { duration: 5000 });
       
       // Show specific field errors if available
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
+      
+      // Reset reCAPTCHA on error
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+        setRecaptchaToken(null);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const onRecaptchaChange = (token) => {
+    setRecaptchaToken(token);
   };
 
   return (
@@ -114,7 +135,7 @@ export default function Login() {
               transition={{ delay: 0.3 }}
               className="text-4xl font-bold text-gray-800 mb-2"
             >
-              Welcome Back
+              {t('auth.welcomeBack')}
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0 }}
@@ -122,7 +143,7 @@ export default function Login() {
               transition={{ delay: 0.4 }}
               className="text-gray-600"
             >
-              {t('auth.login')} to manage your farm
+              {t('auth.login')} {t('auth.loginToManage')}
             </motion.p>
           </div>
 
@@ -137,7 +158,7 @@ export default function Login() {
               {/* Email/Mobile Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.email')} or {t('auth.mobile')} *
+                  {t('auth.email')} {t('auth.emailOrMobile')} {t('auth.mobile')} *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -149,7 +170,7 @@ export default function Login() {
                     value={formData.identifier}
                     onChange={handleChange}
                     className={`input-field pl-10 ${errors.identifier ? 'border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="Enter email or 10-digit mobile"
+                    placeholder={t('auth.enterEmailOrMobile')}
                     autoComplete="username"
                   />
                 </div>
@@ -179,7 +200,7 @@ export default function Login() {
                     value={formData.password}
                     onChange={handleChange}
                     className={`input-field pl-10 pr-10 ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterPassword')}
                     autoComplete="current-password"
                   />
                   <button
@@ -210,19 +231,28 @@ export default function Login() {
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
                   <input type="checkbox" className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
-                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                  <span className="ml-2 text-sm text-gray-600">{t('auth.rememberMe')}</span>
                 </label>
                 <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                  Forgot password?
+                  {t('auth.forgotPassword')}
                 </Link>
+              </div>
+
+              {/* reCAPTCHA */}
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey="6LfILQEsAAAAAGLr5yXfXeL7Cii1wo8VCqqhQmeR"
+                  onChange={onRecaptchaChange}
+                />
               </div>
 
               {/* Submit Button */}
               <motion.button
                 type="submit"
-                disabled={loading}
-                whileHover={{ scale: loading ? 1 : 1.02 }}
-                whileTap={{ scale: loading ? 1 : 0.98 }}
+                disabled={loading || !recaptchaToken}
+                whileHover={{ scale: (loading || !recaptchaToken) ? 1 : 1.02 }}
+                whileTap={{ scale: (loading || !recaptchaToken) ? 1 : 0.98 }}
                 className="btn-primary w-full py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {loading ? (
@@ -249,16 +279,16 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Demo Credentials */}
+            {/* Demo Credentials
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
               className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"
             >
-              <p className="text-xs text-blue-800 font-medium mb-1">🎯 Demo Credentials:</p>
-              <p className="text-xs text-blue-700">Email: demo@farmview.com | Password: demo123</p>
-            </motion.div>
+              <p className="text-xs text-blue-800 font-medium mb-1">🎯 {t('auth.demoCredentials')}</p>
+              <p className="text-xs text-blue-700">{t('auth.demoEmail')}</p>
+            </motion.div> */}
           </motion.div>
         </motion.div>
       </div>

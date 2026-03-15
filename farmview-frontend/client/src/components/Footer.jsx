@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   FaSeedling, 
   FaTwitter, 
@@ -11,26 +12,27 @@ import {
 } from 'react-icons/fa';
 
 export default function Footer() {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
     product: [
-      { label: 'Features', path: '/#features' },
-      { label: 'Pricing', path: '/#pricing' },
-      { label: 'Documentation', path: '/docs' },
-      { label: 'API', path: '/api' }
+      { label: t('footer.features'), path: '/#features' },
+      { label: t('footer.pricing'), path: '/#pricing' },
+      { label: t('footer.documentation'), path: '/docs' },
+      { label: t('footer.api'), path: '/api' }
     ],
     company: [
-      { label: 'About Us', path: '/about' },
-      { label: 'Team', path: '/team' },
-      { label: 'Careers', path: '/careers' },
-      { label: 'Blog', path: '/blog' }
+      { label: t('footer.aboutUs'), path: '/about' },
+      { label: t('footer.team'), path: '/team' },
+      { label: t('footer.careers'), path: '/careers' },
+      { label: t('footer.blog'), path: '/blog' }
     ],
     support: [
-      { label: 'Help Center', path: '/help' },
-      { label: 'Contact', path: '/contact' },
-      { label: 'Privacy Policy', path: '/privacy' },
-      { label: 'Terms of Service', path: '/terms' }
+      { label: t('footer.helpCenter'), path: '/help' },
+      { label: t('footer.contact'), path: '/contact' },
+      { label: t('footer.privacyPolicy'), path: '/privacy' },
+      { label: t('footer.termsOfService'), path: '/terms' }
     ]
   };
 
@@ -54,8 +56,7 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">FarmView AI</span>
             </div>
             <p className="text-gray-400 mb-4 leading-relaxed">
-              Empowering farmers with AI-powered satellite monitoring, insurance integration, 
-              and smart farm management solutions for sustainable agriculture.
+              {t('footer.brandDescription')}
             </p>
             
             {/* Contact Info */}
@@ -77,7 +78,7 @@ export default function Footer() {
 
           {/* Product Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Product</h3>
+            <h3 className="text-white font-semibold mb-4 text-lg">{t('footer.product')}</h3>
             <ul className="space-y-2">
               {footerLinks.product.map((link, index) => (
                 <li key={index}>
@@ -94,7 +95,7 @@ export default function Footer() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Company</h3>
+            <h3 className="text-white font-semibold mb-4 text-lg">{t('footer.company')}</h3>
             <ul className="space-y-2">
               {footerLinks.company.map((link, index) => (
                 <li key={index}>
@@ -111,7 +112,7 @@ export default function Footer() {
 
           {/* Support Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Support</h3>
+            <h3 className="text-white font-semibold mb-4 text-lg">{t('footer.support')}</h3>
             <ul className="space-y-2">
               {footerLinks.support.map((link, index) => (
                 <li key={index}>
@@ -132,7 +133,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             {/* Copyright */}
             <p className="text-gray-400 text-sm text-center md:text-left">
-              &copy; {currentYear} FarmView AI. SSPU Hackathon Project. All rights reserved.
+              &copy; {currentYear} {t('footer.copyright')}
             </p>
 
             {/* Social Links */}
@@ -153,7 +154,7 @@ export default function Footer() {
 
             {/* Made with Love */}
             <p className="text-gray-400 text-sm text-center md:text-right">
-              Made with ❤️ for Indian Farmers
+              {t('footer.madeWithLove')}
             </p>
           </div>
         </div>

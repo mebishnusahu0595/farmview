@@ -4,10 +4,12 @@ import {
   FaTimes, FaRobot, FaCheckCircle, FaTimesCircle, FaSpinner,
   FaExclamationTriangle, FaFileAlt, FaMapMarkedAlt, FaUser
 } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-export default function DocumentVerificationModal({ isOpen, onClose, onVerificationComplete }) {
+export default function DocumentVerificationModal({ isOpen, onClose, onVerificationComplete, properties = [] }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1); // 1: Form, 2: Processing, 3: Results
   const [file, setFile] = useState(null);
   const [formData, setFormData] = useState({
@@ -16,7 +18,8 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
     area: '',
     village: '',
     district: '',
-    documentType: 'Land Documents'
+    documentType: 'Land Documents',
+    propertyId: ''
   });
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -28,12 +31,12 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
       // Check file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
       if (!validTypes.includes(selectedFile.type)) {
-        toast.error('Only JPG, PNG, and PDF files are allowed');
+        toast.error(t('docVerification.invalidFileType'));
         return;
       }
       // Check file size (max 10MB)
       if (selectedFile.size > 10 * 1024 * 1024) {
-        toast.error('File size must be less than 10MB');
+        toast.error(t('docVerification.fileTooLarge'));
         return;
       }
       setFile(selectedFile);
@@ -44,12 +47,12 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
     e.preventDefault();
 
     if (!file) {
-      toast.error('Please select a document to verify');
+      toast.error(t('docVerification.selectFile'));
       return;
     }
 
     if (!formData.ownerName || !formData.surveyNumber || !formData.area) {
-      toast.error('Please fill all required fields');
+      toast.error(t('docVerification.fillFields'));
       return;
     }
 
@@ -58,13 +61,13 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
 
     // Simulate processing stages
     const stages = [
-      'Uploading document...',
-      'Extracting text using OCR...',
-      'Processing document data...',
-      'Validating with AI...',
-      'Comparing extracted data...',
-      'Checking for duplicates...',
-      'Generating verification report...'
+      t('docVerification.uploading'),
+      t('docVerification.extracting'),
+      t('docVerification.processing'),
+      t('docVerification.validating'),
+      t('docVerification.comparing'),
+      t('docVerification.checkingDuplicates'),
+      t('docVerification.generatingReport')
     ];
 
     let stageIndex = 0;
@@ -84,6 +87,9 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
       formDataToSend.append('village', formData.village);
       formDataToSend.append('district', formData.district);
       formDataToSend.append('documentType', formData.documentType);
+      if (formData.propertyId) {
+        formDataToSend.append('propertyId', formData.propertyId);
+      }
 
       const res = await api.post('/documents/verify', formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -96,18 +102,18 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
         setStep(3);
         
         if (res.data.status === 'verified') {
-          toast.success('Document verified successfully!');
+          toast.success(t('docVerification.verified'));
         } else if (res.data.status === 'review') {
-          toast('Document needs review', { icon: '⚠️' });
+          toast(t('docVerification.needsReview'), { icon: '⚠️' });
         } else {
-          toast.error('Document verification failed');
+          toast.error(t('docVerification.failed'));
         }
       }
 
     } catch (err) {
       clearInterval(stageInterval);
       console.error('Verification error:', err);
-      toast.error(err.response?.data?.message || 'Verification failed');
+      toast.error(err.response?.data?.message || t('docVerification.verificationFailed'));
       setStep(1);
     } finally {
       setVerifying(false);
@@ -123,7 +129,8 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
       area: '',
       village: '',
       district: '',
-      documentType: 'Land Documents'
+      documentType: 'Land Documents',
+      propertyId: ''
     });
     setVerificationResult(null);
     setProcessingStage('');
@@ -160,10 +167,10 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
             <div>
               <h2 className="text-2xl font-bold flex items-center">
                 <FaRobot className="mr-3" />
-                OCR + AI Document Verification
+                {t('docVerification.title')}
               </h2>
               <p className="text-blue-100 text-sm mt-1">
-                Automated verification with 85%+ accuracy
+                {t('docVerification.subtitle')}
               </p>
             </div>
             <button
@@ -183,7 +190,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     <FaFileAlt className="inline mr-2 text-blue-600" />
-                    Upload Land Document (7/12, Survey Doc, Land Records) *
+                    {t('docVerification.uploadTitle')}
                   </label>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors">
                     <input
@@ -203,8 +210,8 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                       ) : (
                         <div className="text-gray-500">
                           <FaFileAlt className="text-4xl mx-auto mb-2" />
-                          <p className="font-medium">Click to upload or drag and drop</p>
-                          <p className="text-sm">JPG, PNG or PDF (max 10MB)</p>
+                          <p className="font-medium">{t('docVerification.clickUpload')}</p>
+                          <p className="text-sm">{t('docVerification.fileTypes')}</p>
                         </div>
                       )}
                     </label>
@@ -216,13 +223,13 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <FaUser className="inline mr-2 text-blue-600" />
-                      Owner Name *
+                      {t('docVerification.ownerName')}
                     </label>
                     <input
                       type="text"
                       value={formData.ownerName}
                       onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                      placeholder="Enter full name as per document"
+                      placeholder={t('docVerification.ownerPlaceholder')}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       required
                     />
@@ -230,13 +237,13 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Survey Number / Gat Number *
+                      {t('docVerification.surveyNumber')}
                     </label>
                     <input
                       type="text"
                       value={formData.surveyNumber}
                       onChange={(e) => setFormData({ ...formData, surveyNumber: e.target.value })}
-                      placeholder="e.g., 123/1A"
+                      placeholder={t('docVerification.surveyPlaceholder')}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       required
                     />
@@ -244,14 +251,14 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Area (in hectares) *
+                      {t('docVerification.area')}
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.area}
                       onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                      placeholder="e.g., 2.5"
+                      placeholder={t('docVerification.areaPlaceholder')}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       required
                     />
@@ -260,28 +267,51 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       <FaMapMarkedAlt className="inline mr-2 text-blue-600" />
-                      Village
+                      {t('docVerification.village')}
                     </label>
                     <input
                       type="text"
                       value={formData.village}
                       onChange={(e) => setFormData({ ...formData, village: e.target.value })}
-                      placeholder="Enter village name"
+                      placeholder={t('docVerification.villagePlaceholder')}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      District
+                      {t('docVerification.district')}
                     </label>
                     <input
                       type="text"
                       value={formData.district}
                       onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                      placeholder="Enter district name"
+                      placeholder={t('docVerification.districtPlaceholder')}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
+                  </div>
+
+                  {/* Property Selection Dropdown */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <FaMapMarkedAlt className="inline mr-2 text-green-600" />
+                      📍 Link to Property (Optional)
+                    </label>
+                    <select
+                      value={formData.propertyId}
+                      onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                    >
+                      <option value="">Select Property (Optional)</option>
+                      {properties.map(prop => (
+                        <option key={prop._id} value={prop._id}>
+                          {prop.propertyName} - {prop.area?.value || prop.area} {prop.area?.unit || 'hectares'} ({prop.currentCrop || 'No crop'})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Link this document to a specific property for auto-fill and better organization
+                    </p>
                   </div>
                 </div>
 
@@ -290,12 +320,12 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                   <div className="flex items-start">
                     <FaRobot className="text-blue-600 text-xl mt-1 mr-3 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-blue-900 mb-1">How It Works</h4>
+                      <h4 className="font-semibold text-blue-900 mb-1">{t('docVerification.howItWorks')}</h4>
                       <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• AI extracts text from your document using OCR</li>
-                        <li>• Compares extracted data with your input</li>
-                        <li>• Auto-approves if match score &gt; 85%</li>
-                        <li>• No manual verification needed!</li>
+                        <li>• {t('docVerification.info1')}</li>
+                        <li>• {t('docVerification.info2')}</li>
+                        <li>• {t('docVerification.info3')}</li>
+                        <li>• {t('docVerification.info4')}</li>
                       </ul>
                     </div>
                   </div>
@@ -309,14 +339,14 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                     className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     <FaRobot />
-                    <span>Start AI Verification</span>
+                    <span>{t('docVerification.startVerification')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleClose}
                     className="px-6 py-4 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                   >
-                    Cancel
+                    {t('docVerification.cancel')}
                   </button>
                 </div>
               </form>
@@ -334,7 +364,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                     <FaRobot className="text-6xl text-blue-600" />
                   </motion.div>
                   <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                    AI is Verifying Your Document...
+                    {t('docVerification.processingTitle')}
                   </h3>
                   <div className="max-w-md mx-auto">
                     <div className="bg-gray-200 h-2 rounded-full overflow-hidden mb-4">
@@ -347,7 +377,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                     </div>
                     <p className="text-gray-600 mb-8">
                       <FaSpinner className="inline animate-spin mr-2" />
-                      {processingStage || 'Processing...'}
+                      {processingStage || t('docVerification.processing')}
                     </p>
                   </div>
                 </div>
@@ -369,21 +399,21 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                     <>
                       <FaCheckCircle className="text-5xl text-green-600 mx-auto mb-4" />
                       <h3 className="text-2xl font-bold text-green-900 mb-2">
-                        Document Verified! ✅
+                        {t('docVerification.verified')}
                       </h3>
                     </>
                   ) : verificationResult.status === 'review' ? (
                     <>
                       <FaExclamationTriangle className="text-5xl text-yellow-600 mx-auto mb-4" />
                       <h3 className="text-2xl font-bold text-yellow-900 mb-2">
-                        Needs Review ⚠️
+                        {t('docVerification.needsReview')}
                       </h3>
                     </>
                   ) : (
                     <>
                       <FaTimesCircle className="text-5xl text-red-600 mx-auto mb-4" />
                       <h3 className="text-2xl font-bold text-red-900 mb-2">
-                        Verification Failed ❌
+                        {t('docVerification.failed')}
                       </h3>
                     </>
                   )}
@@ -392,12 +422,12 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
 
                 {/* Match Score */}
                 <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
-                  <h4 className="font-bold text-gray-800 mb-4 text-center">Match Score</h4>
+                  <h4 className="font-bold text-gray-800 mb-4 text-center">{t('docVerification.matchScore')}</h4>
                   <div className="relative pt-1">
                     <div className="flex mb-2 items-center justify-between">
                       <div>
                         <span className="text-xs font-semibold inline-block text-blue-600">
-                          AI Confidence
+                          {t('docVerification.aiConfidence')}
                         </span>
                       </div>
                       <div className="text-right">
@@ -424,7 +454,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                 {/* Extracted Fields */}
                 {verificationResult.extractedFields && Object.keys(verificationResult.extractedFields).length > 0 && (
                   <div className="p-6 bg-gray-50 rounded-xl border-2 border-gray-200">
-                    <h4 className="font-bold text-gray-800 mb-4">Extracted from Document (OCR)</h4>
+                    <h4 className="font-bold text-gray-800 mb-4">{t('docVerification.extractedFields')}</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {Object.entries(verificationResult.extractedFields).map(([key, value]) => (
                         <div key={key} className="bg-white p-3 rounded-lg">
@@ -439,7 +469,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                 {/* Field Comparison */}
                 {verificationResult.comparison && (
                   <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
-                    <h4 className="font-bold text-gray-800 mb-4">Field-by-Field Analysis</h4>
+                    <h4 className="font-bold text-gray-800 mb-4">{t('docVerification.fieldAnalysis')}</h4>
                     <div className="space-y-3">
                       {Object.entries(verificationResult.comparison).map(([field, data]) => {
                         if (field === 'overall') return null;
@@ -468,7 +498,7 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                       onClick={handleComplete}
                       className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all"
                     >
-                      Continue with Verified Document
+                      {t('docVerification.continueVerified')}
                     </button>
                   ) : verificationResult.status === 'review' ? (
                     <>
@@ -476,13 +506,13 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                         onClick={handleComplete}
                         className="flex-1 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all"
                       >
-                        Submit for Manual Review
+                        {t('docVerification.submitReview')}
                       </button>
                       <button
                         onClick={() => setStep(1)}
                         className="flex-1 bg-blue-600 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all"
                       >
-                        Try Again
+                        {t('docVerification.tryAgain')}
                       </button>
                     </>
                   ) : (
@@ -490,14 +520,14 @@ export default function DocumentVerificationModal({ isOpen, onClose, onVerificat
                       onClick={() => setStep(1)}
                       className="flex-1 bg-blue-600 text-white font-semibold py-4 rounded-xl hover:shadow-lg transition-all"
                     >
-                      Upload Different Document
+                      {t('docVerification.uploadDifferent')}
                     </button>
                   )}
                   <button
                     onClick={handleClose}
                     className="px-6 py-4 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                   >
-                    Close
+                    {t('docVerification.close')}
                   </button>
                 </div>
               </div>

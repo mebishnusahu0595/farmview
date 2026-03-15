@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaRobot, 
@@ -18,6 +19,7 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function FieldAdvisor() {
+  const { t } = useTranslation();
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,7 @@ export default function FieldAdvisor() {
       }
     } catch (err) {
       console.error('Failed to fetch properties', err);
-      toast.error('Failed to load your properties');
+      toast.error(t('fieldAdvisor.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -56,21 +58,21 @@ export default function FieldAdvisor() {
     if (selectedProperty) {
       const welcomeMessage = {
         role: 'assistant',
-        content: `Hello! 🌾 I'm your AI Field Advisor for **${selectedProperty.propertyName}**. 
+        content: `${t('fieldAdvisor.welcomeHello')} **${selectedProperty.propertyName}**. 
 
-I can help you with:
-- 🌱 Crop recommendations and best practices
-- 🌦️ Weather-based farming advice
-- 💧 Irrigation and soil management
-- 🐛 Pest and disease prevention
-- 📈 Yield optimization strategies
+${t('fieldAdvisor.welcomeCanHelp')}
+- ${t('fieldAdvisor.welcomeItem1')}
+- ${t('fieldAdvisor.welcomeItem2')}
+- ${t('fieldAdvisor.welcomeItem3')}
+- ${t('fieldAdvisor.welcomeItem4')}
+- ${t('fieldAdvisor.welcomeItem5')}
 
-Feel free to ask me anything about your field!`,
+${t('fieldAdvisor.welcomeClosing')}`,
         timestamp: new Date()
       };
       setMessages([welcomeMessage]);
     }
-  }, [selectedProperty]);
+  }, [selectedProperty, t]);
 
   const handlePropertySelect = (property) => {
     setSelectedProperty(property);
@@ -123,12 +125,12 @@ Feel free to ask me anything about your field!`,
       console.error('AI Error:', error);
       const errorMessage = {
         role: 'assistant',
-        content: '❌ Sorry, I encountered an error. Please try again or rephrase your question.',
+        content: t('fieldAdvisor.errorMessage'),
         timestamp: new Date(),
         isError: true
       };
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('Failed to get AI response');
+      toast.error(t('fieldAdvisor.aiError'));
     } finally {
       setSending(false);
     }
@@ -142,16 +144,16 @@ Feel free to ask me anything about your field!`,
   };
 
   const quickQuestions = [
-    { icon: <FaCloudSun />, text: "What's the best time to plant based on weather?", color: "text-yellow-600" },
-    { icon: <FaTint />, text: "How much water does my crop need?", color: "text-blue-600" },
-    { icon: <FaLeaf />, text: "What are common pests for my crop?", color: "text-green-600" },
-    { icon: <FaSeedling />, text: "How can I improve my soil quality?", color: "text-amber-700" },
-    { icon: <FaChartLine />, text: "Tips to increase crop yield?", color: "text-purple-600" },
-    { icon: <FaExclamationTriangle />, text: "What diseases should I watch for?", color: "text-red-600" }
+    { icon: <FaCloudSun />, text: t('fieldAdvisor.questions.weather'), color: "text-yellow-600" },
+    { icon: <FaTint />, text: t('fieldAdvisor.questions.water'), color: "text-blue-600" },
+    { icon: <FaLeaf />, text: t('fieldAdvisor.questions.pests'), color: "text-green-600" },
+    { icon: <FaSeedling />, text: t('fieldAdvisor.questions.soil'), color: "text-amber-700" },
+    { icon: <FaChartLine />, text: t('fieldAdvisor.questions.yield'), color: "text-purple-600" },
+    { icon: <FaExclamationTriangle />, text: t('fieldAdvisor.questions.diseases'), color: "text-red-600" }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50/30 flex flex-col">
       <Header />
       
       <div className="flex-grow">
@@ -164,9 +166,9 @@ Feel free to ask me anything about your field!`,
           >
             <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center">
               <FaRobot className="mr-3 text-primary-600" />
-              Know Your Field - AI Advisor
+              {t('fieldAdvisor.title')}
             </h1>
-            <p className="text-gray-600">Get personalized farming advice powered by AI for your specific field</p>
+            <p className="text-gray-600">{t('fieldAdvisor.subtitle')}</p>
           </motion.div>
 
           {/* Property Selection */}
@@ -179,7 +181,7 @@ Feel free to ask me anything about your field!`,
               <div className="card bg-white mb-8">
                 <h2 className="text-2xl font-bold mb-4 flex items-center">
                   <FaMapMarkedAlt className="mr-2 text-primary-600" />
-                  Select a Field to Get Started
+                  {t('fieldAdvisor.selectField')}
                 </h2>
                 
                 {loading ? (
@@ -189,9 +191,9 @@ Feel free to ask me anything about your field!`,
                 ) : properties.length === 0 ? (
                   <div className="text-center py-12">
                     <FaMapMarkedAlt className="text-6xl text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">You don't have any properties yet.</p>
+                    <p className="text-gray-600 mb-4">{t('fieldAdvisor.noProperties')}</p>
                     <a href="/property" className="btn-primary">
-                      Add Your First Property
+                      {t('fieldAdvisor.addFirstProperty')}
                     </a>
                   </div>
                 ) : (
@@ -215,21 +217,21 @@ Feel free to ask me anything about your field!`,
                           <div className="space-y-2 text-sm text-gray-700">
                             <div className="flex items-center">
                               <FaLeaf className="text-green-600 mr-2" />
-                              <span><strong>Crop:</strong> {prop.currentCrop || 'Not specified'}</span>
+                              <span><strong>{t('fieldAdvisor.currentCrop')}:</strong> {prop.currentCrop || t('fieldAdvisor.notSpecified')}</span>
                             </div>
                             <div className="flex items-center">
                               <FaMapMarkedAlt className="text-blue-600 mr-2" />
-                              <span><strong>Area:</strong> {prop.area?.value?.toFixed(2) || 'N/A'} {prop.area?.unit || 'ha'}</span>
+                              <span><strong>{t('fieldAdvisor.area')}:</strong> {prop.area?.value?.toFixed(2) || 'N/A'} {prop.area?.unit || 'ha'}</span>
                             </div>
                             <div className="flex items-center">
                               <FaTint className="text-cyan-600 mr-2" />
-                              <span><strong>Soil:</strong> {prop.soilType}</span>
+                              <span><strong>{t('fieldAdvisor.soilType')}:</strong> {prop.soilType}</span>
                             </div>
                           </div>
                           
                           <div className="mt-4 pt-4 border-t border-gray-200">
                             <button className="btn-primary w-full text-sm">
-                              Chat About This Field →
+                              {t('fieldAdvisor.chatAboutField')}
                             </button>
                           </div>
                         </div>
@@ -251,32 +253,32 @@ Feel free to ask me anything about your field!`,
                 <div className="card bg-white sticky top-24">
                   <div className="bg-gradient-to-br from-primary-600 to-secondary-600 text-white p-4 rounded-t-lg -m-6 mb-4">
                     <h3 className="text-lg font-bold mb-1">{selectedProperty.propertyName}</h3>
-                    {selectedProperty.isVerified && <span className="text-xs">✅ Verified Property</span>}
+                    {selectedProperty.isVerified && <span className="text-xs">✅ {t('fieldAdvisor.verifiedProperty')}</span>}
                   </div>
                   
                   <div className="space-y-3 text-sm">
                     <div>
                       <div className="flex items-center text-gray-600 mb-1">
                         <FaLeaf className="mr-2 text-green-600" />
-                        <strong>Current Crop</strong>
+                        <strong>{t('fieldAdvisor.currentCrop')}</strong>
                       </div>
-                      <p className="ml-6 text-gray-800">{selectedProperty.currentCrop || 'Not specified'}</p>
+                      <p className="ml-6 text-gray-800">{selectedProperty.currentCrop || t('fieldAdvisor.notSpecified')}</p>
                     </div>
                     
                     <div>
                       <div className="flex items-center text-gray-600 mb-1">
                         <FaMapMarkedAlt className="mr-2 text-blue-600" />
-                        <strong>Area</strong>
+                        <strong>{t('fieldAdvisor.area')}</strong>
                       </div>
                       <p className="ml-6 text-gray-800">
-                        {selectedProperty.area?.value?.toFixed(2) || 'N/A'} {selectedProperty.area?.unit || 'hectares'}
+                        {selectedProperty.area?.value?.toFixed(2) || 'N/A'} {selectedProperty.area?.unit || t('fieldAdvisor.hectares')}
                       </p>
                     </div>
                     
                     <div>
                       <div className="flex items-center text-gray-600 mb-1">
                         <FaTint className="mr-2 text-amber-700" />
-                        <strong>Soil Type</strong>
+                        <strong>{t('fieldAdvisor.soilType')}</strong>
                       </div>
                       <p className="ml-6 text-gray-800">{selectedProperty.soilType}</p>
                     </div>
@@ -284,7 +286,7 @@ Feel free to ask me anything about your field!`,
                     <div>
                       <div className="flex items-center text-gray-600 mb-1">
                         <FaTint className="mr-2 text-cyan-600" />
-                        <strong>Irrigation</strong>
+                        <strong>{t('fieldAdvisor.irrigation')}</strong>
                       </div>
                       <p className="ml-6 text-gray-800">{selectedProperty.irrigationType}</p>
                     </div>
@@ -294,7 +296,7 @@ Feel free to ask me anything about your field!`,
                     onClick={() => setSelectedProperty(null)}
                     className="btn-outline w-full mt-6"
                   >
-                    ← Change Field
+                    ← {t('fieldAdvisor.changeField')}
                   </button>
                 </div>
               </div>
@@ -326,7 +328,7 @@ Feel free to ask me anything about your field!`,
                               {msg.role === 'assistant' && !msg.isError && (
                                 <div className="flex items-center mb-2">
                                   <FaRobot className="text-primary-600 mr-2" />
-                                  <span className="font-semibold text-primary-600">AI Advisor</span>
+                                  <span className="font-semibold text-primary-600">{t('fieldAdvisor.aiAdvisor')}</span>
                                 </div>
                               )}
                               <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -334,7 +336,7 @@ Feel free to ask me anything about your field!`,
                               {msg.suggestions && msg.suggestions.length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-gray-200">
                                   <p className="text-xs font-semibold mb-2 flex items-center">
-                                    <FaLightbulb className="mr-1" /> Related Topics:
+                                    <FaLightbulb className="mr-1" /> {t('fieldAdvisor.relatedTopics')}
                                   </p>
                                   <div className="flex flex-wrap gap-2">
                                     {msg.suggestions.map((sug, i) => (
@@ -367,7 +369,7 @@ Feel free to ask me anything about your field!`,
                         <div className="bg-gray-100 rounded-lg p-4">
                           <div className="flex items-center space-x-2">
                             <div className="spinner w-4 h-4" />
-                            <span className="text-gray-600">AI is thinking...</span>
+                            <span className="text-gray-600">{t('fieldAdvisor.aiThinking')}</span>
                           </div>
                         </div>
                       </motion.div>
@@ -409,7 +411,7 @@ Feel free to ask me anything about your field!`,
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Ask anything about your field... (Press Enter to send)"
+                        placeholder={t('fieldAdvisor.askPlaceholder')}
                         className="flex-1 input-field resize-none"
                         rows="2"
                         disabled={sending}
@@ -429,7 +431,7 @@ Feel free to ask me anything about your field!`,
                       </motion.button>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      💡 Tip: Be specific! Mention your concerns, observations, or goals for better advice.
+                      {t('fieldAdvisor.tipMessage')}
                     </p>
                   </div>
                 </div>

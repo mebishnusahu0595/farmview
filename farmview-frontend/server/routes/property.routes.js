@@ -95,6 +95,10 @@ router.post('/', protect, upload.array('documents', 5), async (req, res) => {
         type: 'Polygon',
         coordinates: parsedCoordinates
       },
+      boundary: {
+        type: 'Polygon',
+        coordinates: parsedCoordinates // Copy to boundary for ML/GeoAI features
+      },
       centerCoordinates: {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude)

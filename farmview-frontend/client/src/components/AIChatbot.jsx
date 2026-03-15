@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaRobot, FaTimes, FaPaperPlane, FaLeaf } from 'react-icons/fa';
 import api from '../utils/api';
 
 export default function AIChatbot() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: '🌾 Hello! I\'m your FarmView AI Assistant. I can help you with:\n\n• Crop recommendations based on your soil and climate\n• Farming best practices\n• Crop disease identification\n• Weather-based farming advice\n• General farming queries\n\nHow can I help you today?'
+      content: `🌾 ${t('chatbot.welcomeTitle')} ${t('chatbot.welcomeHelp')}\n\n${t('chatbot.welcomeItem1')}\n${t('chatbot.welcomeItem2')}\n${t('chatbot.welcomeItem3')}\n${t('chatbot.welcomeItem4')}\n${t('chatbot.welcomeItem5')}\n\n${t('chatbot.welcomeClosing')}`
     }
   ]);
   const [input, setInput] = useState('');
@@ -54,7 +56,7 @@ export default function AIChatbot() {
         ...prev,
         {
           role: 'assistant',
-          content: '❌ Sorry, I encountered an error. Please try again or contact support if the issue persists.'
+          content: `❌ ${t('chatbot.errorMessage')}`
         }
       ]);
     } finally {
@@ -70,10 +72,10 @@ export default function AIChatbot() {
   };
 
   const quickPrompts = [
-    '🌾 What crops are best for my area?',
-    '💧 How much water does rice need?',
-    '🌡️ Best crops for hot climate',
-    '🏔️ Suitable crops for clay soil'
+    `🌾 ${t('chatbot.prompt1')}`,
+    `💧 ${t('chatbot.prompt2')}`,
+    `🌡️ ${t('chatbot.prompt3')}`,
+    `🏔️ ${t('chatbot.prompt4')}`
   ];
 
   return (
@@ -142,8 +144,8 @@ export default function AIChatbot() {
                   <FaRobot className="text-xl" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">FarmView AI</h3>
-                  <p className="text-xs text-green-100">Ask About Crops, Weather, and More!</p>
+                  <h3 className="font-bold text-lg">{t('chatbot.title')}</h3>
+                  <p className="text-xs text-green-100">{t('chatbot.subtitle')}</p>
                 </div>
               </div>
               <motion.button
@@ -179,7 +181,7 @@ export default function AIChatbot() {
                     {message.role === 'assistant' && (
                       <div className="flex items-center space-x-2 mb-2">
                         <FaLeaf className="text-green-600" />
-                        <span className="text-xs font-semibold text-green-600">AI Assistant</span>
+                        <span className="text-xs font-semibold text-green-600">{t('chatbot.aiAssistant')}</span>
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -223,7 +225,7 @@ export default function AIChatbot() {
             {/* Quick Prompts */}
             {messages.length <= 1 && (
               <div className="px-4 py-2 bg-white border-t">
-                <p className="text-xs text-gray-600 mb-2">Quick questions:</p>
+                <p className="text-xs text-gray-600 mb-2">{t('chatbot.quickQuestions')}</p>
                 <div className="flex flex-wrap gap-2">
                   {quickPrompts.map((prompt, index) => (
                     <motion.button
@@ -251,7 +253,7 @@ export default function AIChatbot() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask about crops, farming, weather..."
+                  placeholder={t('chatbot.placeholder')}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   disabled={loading}
                 />
@@ -266,7 +268,7 @@ export default function AIChatbot() {
                 </motion.button>
               </div>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                💡 AI can make mistakes. Verify important information.
+                💡 {t('chatbot.disclaimer')}
               </p>
             </div>
           </motion.div>

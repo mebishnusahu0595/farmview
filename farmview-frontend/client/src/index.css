@@ -13,7 +13,7 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f9fafb;
+  background-color: #f7fef5;
 }
 
 /* Custom Scrollbar */
@@ -23,16 +23,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #edfce8;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #8aefbb;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #52de97;
 }
 
 /* Custom Utility Classes */
@@ -93,8 +93,8 @@ body {
 
 /* Loading Spinner */
 .spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #16a34a;
+  border: 3px solid #dcfceb;
+  border-top: 3px solid #2bc77a;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -115,4 +115,38 @@ body {
 
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
+}
+
+/* Hide scrollbar for horizontal tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #2bc77a, #6dd158);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

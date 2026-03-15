@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import SatelliteMapView from './SatelliteMapView';
 
 export default function SatelliteNDVI({ propertyId, propertyName }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [ndviData, setNdviData] = useState(null);
   const [ndviStats, setNdviStats] = useState(null);
@@ -93,35 +95,35 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
     
     if (healthPercentage >= 70) {
       return {
-        status: 'Excellent',
+        status: t('satellite.excellent'),
         color: 'text-green-600',
         bgColor: 'bg-green-100',
         icon: '✅',
-        message: 'Your crops are in excellent health!'
+        message: t('satellite.excellentMessage')
       };
     } else if (healthPercentage >= 50) {
       return {
-        status: 'Good',
+        status: t('satellite.good'),
         color: 'text-blue-600',
         bgColor: 'bg-blue-100',
         icon: '👍',
-        message: 'Crops are doing well, monitor regularly'
+        message: t('satellite.goodMessage')
       };
     } else if (healthPercentage >= 30) {
       return {
-        status: 'Fair',
+        status: t('satellite.fair'),
         color: 'text-yellow-600',
         bgColor: 'bg-yellow-100',
         icon: '⚠️',
-        message: 'Some areas need attention'
+        message: t('satellite.fairMessage')
       };
     } else {
       return {
-        status: 'Poor',
+        status: t('satellite.poor'),
         color: 'text-red-600',
         bgColor: 'bg-red-100',
         icon: '🚨',
-        message: 'Urgent action required!'
+        message: t('satellite.poorMessage')
       };
     }
   };
@@ -132,7 +134,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
     <div className="card p-6 mt-6 bg-gradient-to-br from-white to-gray-50">
       <h2 className="text-3xl font-bold mb-6 flex items-center text-gray-800">
         <span className="text-4xl mr-3">🛰️</span>
-        Satellite Analysis - {propertyName}
+        {t('satellite.satelliteAnalysis')} - {propertyName}
       </h2>
 
       {/* Action Buttons */}
@@ -146,7 +148,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
               : 'bg-white border-2 border-green-600 text-green-600 hover:bg-green-50'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {loading && activeView === 'ndvi' ? '⏳ Loading...' : '📊 NDVI Heatmap'}
+          {loading && activeView === 'ndvi' ? `⏳ ${t('satellite.loading')}` : `📊 ${t('satellite.ndviHeatmap')}`}
         </button>
         <button
           onClick={fetchSatelliteImage}
@@ -157,7 +159,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
               : 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {loading && activeView === 'satellite' ? '⏳ Loading...' : '🌍 Sentinel Image'}
+          {loading && activeView === 'satellite' ? `⏳ ${t('satellite.loading')}` : `🌍 ${t('satellite.sentinelImage')}`}
         </button>
         <button
           onClick={showGoogleMap}
@@ -168,7 +170,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
               : 'bg-white border-2 border-purple-600 text-purple-600 hover:bg-purple-50'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {loading && activeView === 'googlemap' ? '⏳ Loading...' : '🗺️ Google Maps Satellite'}
+          {loading && activeView === 'googlemap' ? `⏳ ${t('satellite.loading')}` : `🗺️ ${t('satellite.googleMapsSatellite')}`}
         </button>
       </div>
 
@@ -177,7 +179,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-xl shadow-md mb-6 flex items-center">
           <span className="text-2xl mr-3">⚠️</span>
           <div>
-            <strong className="font-bold">Error:</strong>
+            <strong className="font-bold">{t('satellite.error')}:</strong>
             <span className="block mt-1">{error}</span>
           </div>
         </div>
@@ -191,7 +193,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
               <span className="text-5xl">{healthStatus.icon}</span>
               <div>
                 <h3 className={`text-2xl font-bold ${healthStatus.color}`}>
-                  Field Health: {healthStatus.status}
+                  {t('satellite.fieldHealth')}: {healthStatus.status}
                 </h3>
                 <p className="text-sm mt-1">{healthStatus.message}</p>
               </div>
@@ -199,7 +201,7 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
             {ndviStats && (
               <div className="text-right">
                 <div className="text-3xl font-bold">{((ndviStats.healthyPixels / ndviStats.validPixels) * 100).toFixed(1)}%</div>
-                <div className="text-sm">Healthy Coverage</div>
+                <div className="text-sm">{t('satellite.healthyCoverage')}</div>
               </div>
             )}
           </div>
@@ -237,11 +239,11 @@ export default function SatelliteNDVI({ propertyId, propertyName }) {
                   <span>Excellent</span>
                 </div>
                 
-                {/* Pointer/Indicator */}
+                {/* Pointer/Indicator - positioned by health percentage */}
                 <div 
                   className="absolute -top-2 transform -translate-x-1/2 transition-all duration-500"
                   style={{ 
-                    left: `${Math.max(5, Math.min(95, ((ndviStats.mean + 1) / 2) * 100))}%`
+                    left: `${Math.max(5, Math.min(95, (ndviStats.healthyPixels / ndviStats.validPixels) * 100))}%`
                   }}
                 >
                   <div className="flex flex-col items-center">

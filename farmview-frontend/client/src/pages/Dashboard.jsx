@@ -62,41 +62,42 @@ export default function Dashboard() {
       icon: <FaFileAlt className="text-4xl" />, 
       title: t('nav.documents'), 
       path: '/documents', 
-      color: 'from-blue-500 to-blue-600',
-      description: 'Manage documents'
+      color: 'from-green-400 to-emerald-500',
+      description: t('dashboard.manageDocuments')
     },
     { 
       icon: <FaMapMarkedAlt className="text-4xl" />, 
       title: t('nav.property'), 
       path: '/property', 
       color: 'from-green-500 to-green-600',
-      description: 'View properties'
+      description: t('dashboard.viewProperties')
     },
     { 
       icon: <FaShieldAlt className="text-4xl" />, 
       title: t('nav.insurance'), 
       path: '/insurance', 
-      color: 'from-purple-500 to-purple-600',
-      description: 'Insurance policies'
+      color: 'from-emerald-400 to-teal-500',
+      description: t('dashboard.insurancePolicies')
     },
     { 
       icon: <FaCloudSun className="text-4xl" />, 
       title: t('nav.weather'), 
       path: '/weather', 
-      color: 'from-yellow-500 to-yellow-600',
-      description: 'Weather forecast'
+      color: 'from-lime-400 to-green-500',
+      description: t('dashboard.weatherForecast')
     },
     { 
       icon: <span className="text-4xl">🌾</span>, 
-      title: 'Crop Intelligence', 
+      title: t('dashboard.cropIntelligence'), 
       path: '/crop-intelligence', 
-      color: 'from-teal-500 to-teal-600',
-      description: 'AI-powered crop analysis'
+      color: 'from-teal-400 to-cyan-500',
+      description: t('dashboard.aiCropAnalysis')
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50/30 flex flex-col"
+>
       <Header />
 
       <div className="flex-grow">
@@ -136,7 +137,7 @@ export default function Dashboard() {
                 <div className="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
                   <div className="flex items-center space-x-2">
                     <FaTrophy className="text-yellow-300 text-2xl" />
-                    <span className="font-bold text-lg">Active Farmer</span>
+                    <span className="font-bold text-lg">{t('dashboard.activeFarmer')}</span>
                   </div>
                 </div>
               </motion.div>
@@ -147,9 +148,9 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[
               { label: t('dashboard.totalProperties'), value: stats.properties, color: 'text-green-600', icon: '🏡' },
-              { label: t('dashboard.activeInsurance'), value: stats.insurance, color: 'text-purple-600', icon: '🛡️' },
-              { label: t('dashboard.documents'), value: stats.documents, color: 'text-blue-600', icon: '📄' },
-              { label: 'Status', value: 'Active', color: 'text-green-600', icon: '✅', isText: true }
+              { label: t('dashboard.activeInsurance'), value: stats.insurance, color: 'text-emerald-600', icon: '🛡️' },
+              { label: t('dashboard.documents'), value: stats.documents, color: 'text-teal-600', icon: '📄' },
+              { label: t('dashboard.status'), value: t('dashboard.active'), color: 'text-green-600', icon: '✅', isText: true }
             ].map((stat, index) => (
               <motion.div
                 key={index}
@@ -231,9 +232,9 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
+                    className="flex items-start space-x-4 p-4 bg-green-50/50 rounded-lg hover:bg-green-100/60 transition-all"
                   >
-                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xl">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xl">
                       {activity.icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -254,7 +255,7 @@ export default function Dashboard() {
                 <div className="text-6xl mb-4">📊</div>
                 <p className="text-gray-600 text-lg">{t('common.noData')}</p>
                 <p className="text-gray-500 text-sm mt-2">
-                  Start by adding your property or uploading documents
+                  {t('dashboard.startMessage')}
                 </p>
               </div>
             )}

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { FaMapMarkedAlt, FaPlus, FaTimes, FaSatellite, FaLeaf, FaTint, FaMountain } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaPlus, FaTimes, FaSatellite, FaLeaf, FaTint, FaMountain, FaTrash, FaEdit, FaCheckCircle, FaRobot } from 'react-icons/fa';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-draw';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 import SatelliteNDVI from '../components/SatelliteNDVI';
 import AIChatbot from '../components/AIChatbot';
 import Header from '../components/Header';
@@ -30,6 +31,8 @@ export default function Property() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null); // For satellite analysis
+  const [verifyingProperty, setVerifyingProperty] = useState(null); // For AI verification
+  const [deletingProperty, setDeletingProperty] = useState(null); // For deletion
   
   // Crop recommendation states
   const [allCrops, setAllCrops] = useState([]);
@@ -101,6 +104,102 @@ export default function Property() {
       console.error('Failed to get crop recommendations', err);
     } finally {
       setLoadingRecommendations(false);
+    }
+  };
+
+  // AI Verification for Property
+  const handleAIVerification = async (propertyId) => {
+    const confirmVerify = window.confirm(
+      '🤖 AI Verification Process\n\n' +
+      'This will analyze:\n' +
+      '• Satellite imagery from Sentinel-2\n' +
+      '• NDVI analysis for crop health\n' +
+      '• Land boundary validation\n' +
+      '• Document OCR verification (if available)\n' +
+      '• Coordinates validation\n\n' +
+      'This may take 30-60 seconds. Continue?'
+    );
+
+    if (!confirmVerify) return;
+
+    setVerifyingProperty(propertyId);
+    try {
+      toast.loading('🤖 AI analyzing property...', { id: 'verify-toast' });
+      
+      const res = await api.post(`/property/${propertyId}/verify-ai`);
+      
+      if (res.data?.success) {
+        const mlData = res.data.data.mlAnalysis;
+        const level = mlData.verificationLevel;
+        const levelEmoji = level === 'GOLD' ? '🥇' : level === 'SILVER' ? '🥈' : level === 'BRONZE' ? '🥉' : '⏳';
+        
+        toast.success(
+          <div>
+            <p className="font-bold">{levelEmoji} Property Verified - {level} Level</p>
+            <p className="text-sm">Score: {mlData.overallScore.toFixed(1)}/100</p>
+            <p className="text-sm">Confidence: {mlData.confidence.toFixed(1)}%</p>
+            <p className="text-xs mt-1">{mlData.status}</p>
+          </div>,
+          { id: 'verify-toast', duration: 5000 }
+        );
+        
+        // Refresh properties
+        await fetchProperties();
+      } else {
+        toast.error(res.data?.message || 'Verification failed', { id: 'verify-toast' });
+      }
+    } catch (err) {
+      console.error('AI Verification error:', err);
+      toast.error(
+        err.response?.data?.message || 'AI verification failed. Property needs manual review.',
+        { id: 'verify-toast', duration: 5000 }
+      );
+    } finally {
+      setVerifyingProperty(null);
+    }
+  };
+
+  // Delete Property
+  const handleDeleteProperty = async (propertyId, propertyName) => {
+    const confirmDelete = window.confirm(
+      `⚠️ Delete Property?\n\n` +
+      `Property: ${propertyName}\n\n` +
+      `This action cannot be undone. All associated data including:\n` +
+      `• Satellite analysis\n` +
+      `• Documents\n` +
+      `• History\n\n` +
+      `will be permanently deleted. Continue?`
+    );
+
+    if (!confirmDelete) return;
+
+    setDeletingProperty(propertyId);
+    try {
+      toast.loading('Deleting property...', { id: 'delete-toast' });
+      
+      const res = await api.delete(`/property/${propertyId}`);
+      
+      if (res.data?.success) {
+        toast.success('Property deleted successfully!', { id: 'delete-toast' });
+        
+        // Close satellite view if this property was selected
+        if (selectedProperty?._id === propertyId) {
+          setSelectedProperty(null);
+        }
+        
+        // Refresh properties
+        await fetchProperties();
+      } else {
+        toast.error(res.data?.message || 'Failed to delete property', { id: 'delete-toast' });
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error(
+        err.response?.data?.message || 'Failed to delete property',
+        { id: 'delete-toast' }
+      );
+    } finally {
+      setDeletingProperty(null);
     }
   };
 
@@ -254,20 +353,16 @@ export default function Property() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!polygon || polygon.length === 0) {
-      alert('Please draw your field boundary on the map');
+      alert(t('property.drawBoundaryAlert'));
       return;
     }
 
     // Check for verified documents
     const lastVerified = localStorage.getItem('lastVerifiedDocument');
     if (!lastVerified) {
-      const confirmProceed = window.confirm(
-        '⚠️ No verified documents found!\n\n' +
-        'For fraud prevention, we recommend verifying your land documents using AI verification in the Documents page.\n\n' +
-        'Do you want to proceed without verification?'
-      );
+      const confirmProceed = window.confirm(t('property.noVerifiedDocsConfirm'));
       if (!confirmProceed) {
-        alert('Please verify your documents first from the Documents page.');
+        alert(t('property.verifyFirstAlert'));
         return;
       }
     } else {
@@ -278,13 +373,9 @@ export default function Property() {
       
       // Check if verification is older than 24 hours
       if (hoursDiff > 24) {
-        const confirmProceed = window.confirm(
-          '⚠️ Your document verification is older than 24 hours.\n\n' +
-          'We recommend re-verifying your documents for security.\n\n' +
-          'Do you want to proceed anyway?'
-        );
+        const confirmProceed = window.confirm(t('property.oldVerificationConfirm'));
         if (!confirmProceed) {
-          alert('Please re-verify your documents from the Documents page.');
+          alert(t('property.reverifyAlert'));
           return;
         }
       }
@@ -339,7 +430,7 @@ export default function Property() {
       });
 
       if (res.data?.success) {
-        alert('✅ Property registered successfully!');
+        alert(t('property.registeredSuccess'));
         
         // Clear verification data after successful registration
         localStorage.removeItem('lastVerifiedDocument');
@@ -355,19 +446,19 @@ export default function Property() {
           drawLayerRef.current.clearLayers();
         }
       } else {
-        alert('Failed to create property');
+        alert(t('property.createFailed'));
       }
 
     } catch (err) {
       console.error('Submit error', err);
-      alert(err.response?.data?.message || err.message || 'Failed to create property');
+      alert(err.response?.data?.message || err.message || t('property.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50/30 flex flex-col">
       <Header />
       
       <div className="flex-grow">
@@ -380,9 +471,9 @@ export default function Property() {
           >
             <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center">
               <FaMapMarkedAlt className="mr-3 text-primary-600" />
-              Property Management
+              {t('property.title')}
             </h1>
-            <p className="text-gray-600">Manage your farm properties and view satellite analysis</p>
+            <p className="text-gray-600">{t('property.subtitle')}</p>
           </motion.div>
 
           {/* Property List Section */}
@@ -394,7 +485,7 @@ export default function Property() {
           >
             <h2 className="text-3xl font-bold mb-6 flex items-center">
               <FaMapMarkedAlt className="mr-2 text-primary-600" />
-              My Properties
+              {t('property.myProperties')}
             </h2>
             {loading ? (
               <div className="flex justify-center items-center py-12">
@@ -407,8 +498,8 @@ export default function Property() {
                 className="card bg-gradient-to-br from-primary-50 to-secondary-50 p-8 text-center"
               >
                 <FaMapMarkedAlt className="text-6xl text-primary-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No Properties Yet</h3>
-                <p className="text-gray-600 mb-4">Start by creating your first property below</p>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{t('property.noProperties')}</h3>
+                <p className="text-gray-600 mb-4">{t('property.noPropertiesDesc')}</p>
                 <FaPlus className="text-primary-600 mx-auto text-3xl" />
               </motion.div>
             ) : (
@@ -423,16 +514,37 @@ export default function Property() {
                     className="relative"
                   >
                     <div className="card bg-white hover:shadow-2xl transition-shadow duration-300 cursor-pointer h-full">
-                      <div className="bg-gradient-to-br from-primary-600 to-secondary-600 text-white p-4 rounded-t-lg">
+                      <div className="bg-gradient-to-br from-green-400 via-green-500 to-emerald-500 text-white p-4 rounded-t-lg">
                         <h3 className="text-xl font-bold mb-1">{prop.propertyName}</h3>
-                        <div className="flex items-center text-sm text-primary-100">
-                          {prop.isVerified ? (
+                        <div className="flex items-center justify-between text-sm text-green-100">
+                          {prop.verificationLevel && prop.verificationLevel !== 'PENDING' ? (
+                            <span className="flex items-center space-x-2">
+                              <span>
+                                {prop.verificationLevel === 'GOLD' && '🥇'}
+                                {prop.verificationLevel === 'SILVER' && '🥈'}
+                                {prop.verificationLevel === 'BRONZE' && '🥉'}
+                              </span>
+                              <span className="font-semibold">{prop.verificationLevel}</span>
+                              {prop.mlConfidence && (
+                                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                                  {prop.mlConfidence.toFixed(1)}% confidence
+                                </span>
+                              )}
+                            </span>
+                          ) : prop.isVerified ? (
                             <span className="flex items-center">
-                              ✅ Verified
+                              ✅ {t('property.verified')}
+                            </span>
+                          ) : prop.verificationScore ? (
+                            <span className="flex items-center space-x-2">
+                              <span>⏳ Review Required</span>
+                              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                                {prop.verificationScore.toFixed(1)}/100
+                              </span>
                             </span>
                           ) : (
                             <span className="flex items-center">
-                              ⏳ Pending Verification
+                              ⏳ {t('property.pendingVerification')}
                             </span>
                           )}
                         </div>
@@ -441,22 +553,22 @@ export default function Property() {
                       <div className="p-4 space-y-3">
                         <div className="flex items-center text-gray-700">
                           <FaLeaf className="text-green-600 mr-2 flex-shrink-0" />
-                          <span className="text-sm"><strong>Crop:</strong> {prop.currentCrop || 'Not specified'}</span>
+                          <span className="text-sm"><strong>{t('property.crop')}:</strong> {prop.currentCrop || t('property.notSpecified')}</span>
                         </div>
                         
                         <div className="flex items-center text-gray-700">
                           <FaMapMarkedAlt className="text-blue-600 mr-2 flex-shrink-0" />
-                          <span className="text-sm"><strong>Area:</strong> {prop.area?.value ? `${prop.area.value.toFixed(2)} ${prop.area.unit || 'ha'}` : 'N/A'}</span>
+                          <span className="text-sm"><strong>{t('property.area')}:</strong> {prop.area?.value ? `${prop.area.value.toFixed(2)} ${prop.area.unit || 'ha'}` : 'N/A'}</span>
                         </div>
                         
                         <div className="flex items-center text-gray-700">
                           <FaMountain className="text-amber-700 mr-2 flex-shrink-0" />
-                          <span className="text-sm"><strong>Soil:</strong> {prop.soilType}</span>
+                          <span className="text-sm"><strong>{t('property.soil')}:</strong> {prop.soilType}</span>
                         </div>
                         
                         <div className="flex items-center text-gray-700">
                           <FaTint className="text-cyan-600 mr-2 flex-shrink-0" />
-                          <span className="text-sm"><strong>Irrigation:</strong> {prop.irrigationType}</span>
+                          <span className="text-sm"><strong>{t('property.irrigation')}:</strong> {prop.irrigationType}</span>
                         </div>
                         
                         {prop.centerCoordinates?.latitude && prop.centerCoordinates?.longitude && (
@@ -467,19 +579,69 @@ export default function Property() {
                         
                         {prop.documents && prop.documents.length > 0 && (
                           <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                            📄 {prop.documents.length} document(s) attached
+                            📄 {prop.documents.length} {t('property.documentsAttached')}
                           </div>
                         )}
                       </div>
                       
-                      <div className="p-4 pt-0">
+                      <div className="p-4 pt-0 space-y-2">
                         <button
                           onClick={() => setSelectedProperty(prop)}
                           className="btn-primary w-full flex items-center justify-center space-x-2 hover:scale-105 active:scale-95 transition-transform duration-200"
                         >
                           <FaSatellite />
-                          <span>View Satellite Analysis</span>
+                          <span>{t('property.viewSatellite')}</span>
                         </button>
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* AI Verification Button */}
+                          {!prop.isVerified && (
+                            <button
+                              onClick={() => handleAIVerification(prop._id)}
+                              disabled={verifyingProperty === prop._id}
+                              className="flex items-center justify-center space-x-1 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                            >
+                              {verifyingProperty === prop._id ? (
+                                <>
+                                  <div className="spinner w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>Verifying...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FaRobot />
+                                  <span>AI Verify</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          {prop.isVerified && (
+                            <div className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
+                              <FaCheckCircle />
+                              <span>Verified</span>
+                            </div>
+                          )}
+
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDeleteProperty(prop._id, prop.propertyName)}
+                            disabled={deletingProperty === prop._id}
+                            className={`flex items-center justify-center space-x-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${!prop.isVerified ? '' : 'col-span-1'}`}
+                          >
+                            {deletingProperty === prop._id ? (
+                              <>
+                                <div className="spinner w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                <span>Deleting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaTrash />
+                                <span>Delete</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -516,7 +678,7 @@ export default function Property() {
           >
             <h2 className="text-3xl font-bold mb-6 flex items-center">
               <FaPlus className="mr-2 text-primary-600" />
-              Add New Property
+              {t('property.addNew')}
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="col-span-2">
@@ -527,23 +689,23 @@ export default function Property() {
 
               <div className="col-span-1">
                 <div className="card bg-white">
-                  <div className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white p-4 rounded-t-lg mb-4 -m-6 mb-6">
+                  <div className="bg-gradient-to-r from-green-400 via-green-500 to-emerald-500 text-white p-4 rounded-t-lg mb-4 -m-6 mb-6">
                     <h3 className="text-xl font-bold flex items-center">
                       <FaMapMarkedAlt className="mr-2" />
-                      Property Details
+                      {t('property.propertyDetails')}
                     </h3>
                   </div>
 
                   <label className="block mb-2 font-medium text-gray-700 flex items-center">
                     <FaMapMarkedAlt className="mr-2 text-primary-600" />
-                    Search Location
+                    {t('property.searchLocation')}
                   </label>
                   <div className="flex mb-4">
                     <input 
                       value={address} 
                       onChange={e => setAddress(e.target.value)} 
                       className="flex-1 input-field" 
-                      placeholder="Type address (e.g., Mumbai, Maharashtra)" 
+                      placeholder={t('property.addressPlaceholder')}
                     />
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -552,19 +714,19 @@ export default function Property() {
                       disabled={searching}
                       className="btn-outline ml-2 px-4"
                     >
-                      {searching ? '🔍 Searching...' : '🔍 Search'}
+                      {searching ? `🔍 ${t('property.searching')}` : `🔍 ${t('property.search')}`}
                     </motion.button>
                   </div>
 
-                  <label className="block mb-2 font-medium text-gray-700">Property Name *</label>
+                  <label className="block mb-2 font-medium text-gray-700">{t('property.propertyName')} *</label>
                   <input 
                     value={propertyName} 
                     onChange={e => setPropertyName(e.target.value)} 
                     className="input-field mb-4" 
-                    placeholder="e.g., North Field, Rice Paddy" 
+                    placeholder={t('property.propertyNamePlaceholder')}
                   />
 
-                  <label className="block mb-2 font-medium text-gray-700">Calculated Area</label>
+                  <label className="block mb-2 font-medium text-gray-700">{t('property.calculatedArea')}</label>
                   <div className="mb-4 p-3 bg-primary-50 border-2 border-primary-200 rounded-lg text-center">
                     <span className="text-2xl font-bold text-primary-600">
                       {area || '📐 Draw polygon on map'}
@@ -600,28 +762,28 @@ export default function Property() {
                     onChange={e => setSoilType(e.target.value)} 
                     className="input-field mb-4"
                   >
-                    <option>Alluvial</option>
-                    <option>Black</option>
-                    <option>Red</option>
-                    <option>Laterite</option>
-                    <option>Desert</option>
-                    <option>Mountain</option>
-                    <option>Other</option>
+                    <option>{t('property.soilTypes.alluvial')}</option>
+                    <option>{t('property.soilTypes.black')}</option>
+                    <option>{t('property.soilTypes.red')}</option>
+                    <option>{t('property.soilTypes.laterite')}</option>
+                    <option>{t('property.soilTypes.desert')}</option>
+                    <option>{t('property.soilTypes.mountain')}</option>
+                    <option>{t('property.soilTypes.other')}</option>
                   </select>
 
                   <label className="block mb-2 font-medium text-gray-700 flex items-center">
                     <FaTint className="mr-2 text-cyan-600" />
-                    Irrigation Type
+                    {t('property.irrigationType')}
                   </label>
                   <select 
                     value={irrigationType} 
                     onChange={e => setIrrigationType(e.target.value)} 
                     className="input-field mb-4"
                   >
-                    <option>Rainfed</option>
-                    <option>Drip</option>
-                    <option>Sprinkler</option>
-                    <option>Other</option>
+                    <option>{t('property.irrigationTypes.rainfed')}</option>
+                    <option>{t('property.irrigationTypes.drip')}</option>
+                    <option>{t('property.irrigationTypes.sprinkler')}</option>
+                    <option>{t('property.irrigationTypes.other')}</option>
                   </select>
 
                   {/* Crop Recommendation Button */}
@@ -635,12 +797,12 @@ export default function Property() {
                     {loadingRecommendations ? (
                       <>
                         <div className="spinner w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Getting Recommendations...</span>
+                        <span>{t('property.gettingRecommendations')}</span>
                       </>
                     ) : (
                       <>
                         <FaLeaf />
-                        <span>🌾 Get Crop Recommendations (1000+ Crops)</span>
+                        <span>🌾 {t('property.getCropRecommendations')}</span>
                       </>
                     )}
                   </motion.button>
@@ -655,7 +817,7 @@ export default function Property() {
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-xl font-bold text-green-800 flex items-center">
                           <span className="mr-2">🌾</span>
-                          Top Recommended Crops
+                          {t('property.topRecommended')}
                         </h4>
                         <button
                           onClick={() => setShowRecommendations(false)}
@@ -669,24 +831,24 @@ export default function Property() {
                       <div className="grid grid-cols-3 gap-3 mb-4">
                         <div className="bg-white p-3 rounded-lg shadow text-center">
                           <div className="text-2xl mb-1">🌡️</div>
-                          <div className="text-xs text-gray-600">Climate</div>
+                          <div className="text-xs text-gray-600">{t('property.climate')}</div>
                           <div className="font-bold text-green-700 capitalize">{recommendedCrops.climateZone}</div>
                         </div>
                         <div className="bg-white p-3 rounded-lg shadow text-center">
                           <div className="text-2xl mb-1">🏔️</div>
-                          <div className="text-xs text-gray-600">Soil</div>
+                          <div className="text-xs text-gray-600">{t('property.soil')}</div>
                           <div className="font-bold text-amber-700">{recommendedCrops.soilType}</div>
                         </div>
                         <div className="bg-white p-3 rounded-lg shadow text-center">
                           <div className="text-2xl mb-1">💧</div>
-                          <div className="text-xs text-gray-600">Irrigation</div>
+                          <div className="text-xs text-gray-600">{t('property.irrigation')}</div>
                           <div className="font-bold text-cyan-700">{recommendedCrops.irrigationType}</div>
                         </div>
                       </div>
 
                       {/* Top 10 Recommendations */}
                       <div className="bg-white rounded-lg p-4 shadow-md mb-4">
-                        <h5 className="font-bold text-green-700 mb-3">✨ Best Matches:</h5>
+                        <h5 className="font-bold text-green-700 mb-3">✨ {t('property.bestMatches')}:</h5>
                         <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                           {recommendedCrops.topRecommendations.slice(0, 20).map((rec, index) => (
                             <motion.button
@@ -725,7 +887,7 @@ export default function Property() {
                       {/* Category-wise Recommendations */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white rounded-lg p-3 shadow">
-                          <h6 className="font-bold text-xs text-gray-700 mb-2">🌾 Cereals</h6>
+                          <h6 className="font-bold text-xs text-gray-700 mb-2">🌾 {t('property.cereals')}</h6>
                           <div className="space-y-1">
                             {recommendedCrops.categoryRecommendations.cereals.slice(0, 3).map((rec, i) => (
                               <div key={i} className="text-xs text-gray-600 cursor-pointer hover:text-green-600" onClick={() => setCurrentCrop(rec.crop)}>
@@ -735,7 +897,7 @@ export default function Property() {
                           </div>
                         </div>
                         <div className="bg-white rounded-lg p-3 shadow">
-                          <h6 className="font-bold text-xs text-gray-700 mb-2">🥬 Vegetables</h6>
+                          <h6 className="font-bold text-xs text-gray-700 mb-2">🥬 {t('property.vegetables')}</h6>
                           <div className="space-y-1">
                             {recommendedCrops.categoryRecommendations.vegetables.slice(0, 3).map((rec, i) => (
                               <div key={i} className="text-xs text-gray-600 cursor-pointer hover:text-green-600" onClick={() => setCurrentCrop(rec.crop)}>
@@ -745,7 +907,7 @@ export default function Property() {
                           </div>
                         </div>
                         <div className="bg-white rounded-lg p-3 shadow">
-                          <h6 className="font-bold text-xs text-gray-700 mb-2">🍎 Fruits</h6>
+                          <h6 className="font-bold text-xs text-gray-700 mb-2">🍎 {t('property.fruits')}</h6>
                           <div className="space-y-1">
                             {recommendedCrops.categoryRecommendations.fruits.slice(0, 3).map((rec, i) => (
                               <div key={i} className="text-xs text-gray-600 cursor-pointer hover:text-green-600" onClick={() => setCurrentCrop(rec.crop)}>
@@ -755,7 +917,7 @@ export default function Property() {
                           </div>
                         </div>
                         <div className="bg-white rounded-lg p-3 shadow">
-                          <h6 className="font-bold text-xs text-gray-700 mb-2">🌶️ Spices</h6>
+                          <h6 className="font-bold text-xs text-gray-700 mb-2">🌶️ {t('property.spices')}</h6>
                           <div className="space-y-1">
                             {recommendedCrops.categoryRecommendations.spices.slice(0, 3).map((rec, i) => (
                               <div key={i} className="text-xs text-gray-600 cursor-pointer hover:text-green-600" onClick={() => setCurrentCrop(rec.crop)}>
@@ -767,12 +929,12 @@ export default function Property() {
                       </div>
 
                       <div className="mt-4 text-xs text-gray-600 text-center">
-                        Analyzed {recommendedCrops.totalAnalyzed} crops • Click any crop to select
+                        {t('property.analyzedCrops', { count: recommendedCrops.totalAnalyzed })}
                       </div>
                     </motion.div>
                   )}
 
-              <label className="block mb-2 font-medium text-gray-700">Property Papers (images/PDF, max 5)</label>
+              <label className="block mb-2 font-medium text-gray-700">{t('property.propertyPapers')}</label>
               <input type="file" multiple onChange={handleFiles} className="mb-4 text-sm" accept="image/*,.pdf" />
 
               {/* Document Verification Status */}
@@ -785,14 +947,14 @@ export default function Property() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <span className="text-2xl">✅</span>
-                          <span className="font-bold text-green-800">Document Verified</span>
+                          <span className="font-bold text-green-800">{t('property.documentVerified')}</span>
                         </div>
                         <span className="text-sm font-semibold text-green-700 bg-green-200 px-2 py-1 rounded">
-                          {verifiedData.verificationScore}% Match
+                          {verifiedData.verificationScore}% {t('property.match')}
                         </span>
                       </div>
                       <p className="text-xs text-green-700">
-                        Your documents have been verified by AI. You can now register your property securely.
+                        {t('property.verifiedMessage')}
                       </p>
                     </div>
                   );
@@ -801,16 +963,16 @@ export default function Property() {
                     <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
                       <div className="flex items-center mb-2">
                         <span className="text-2xl mr-2">⚠️</span>
-                        <span className="font-bold text-yellow-800">No Verified Documents</span>
+                        <span className="font-bold text-yellow-800">{t('property.noVerifiedDocs')}</span>
                       </div>
                       <p className="text-xs text-yellow-700 mb-2">
-                        We recommend verifying your land documents using AI for fraud prevention.
+                        {t('property.recommendVerification')}
                       </p>
                       <a 
                         href="/documents" 
                         className="text-xs text-blue-600 hover:text-blue-800 underline font-semibold"
                       >
-                        → Verify Documents Now
+                        → {t('property.verifyNow')}
                       </a>
                     </div>
                   );
@@ -827,12 +989,12 @@ export default function Property() {
                 {submitting ? (
                   <>
                     <div className="spinner w-5 h-5" />
-                    <span>Submitting...</span>
+                    <span>{t('property.submitting')}</span>
                   </>
                 ) : (
                   <>
                     <FaPlus />
-                    <span>Create Property</span>
+                    <span>{t('property.createProperty')}</span>
                   </>
                 )}
               </motion.button>

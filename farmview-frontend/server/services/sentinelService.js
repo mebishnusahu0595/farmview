@@ -289,11 +289,21 @@ function evaluatePixel(sample) {
         try {
           const errorData = Buffer.from(error.response.data).toString('utf8');
           console.error('Sentinel Hub Error Details:', errorData);
+          
+          // Try to parse the error JSON
+          try {
+            const errorJson = JSON.parse(errorData);
+            throw new Error(`Sentinel Hub: ${errorJson.error.reason || errorJson.error.message || 'Bad Request'}`);
+          } catch (parseError) {
+            throw new Error(`Sentinel Hub returned error: ${errorData}`);
+          }
         } catch (e) {
           console.error('Could not parse error response');
         }
       }
-      throw error;
+      
+      // Provide more helpful error message
+      throw new Error('No satellite data available for this location/date. This could be due to: 1) No recent cloud-free imagery, 2) Area outside satellite coverage, or 3) Date range has no data.');
     }
   }
 
@@ -418,7 +428,7 @@ function evaluatePixel(sample) {
 
       console.log('📊 Calculating NDVI statistics...');
 
-      // Request raw NDVI values as float32 in TIFF format
+      // Request raw NDVI values as UINT8 in PNG format (more reliable than TIFF)
       const evalscript = `
 //VERSION=3
 function setup() {
@@ -426,7 +436,7 @@ function setup() {
     input: ["B08", "B04", "SCL"],
     output: { 
       bands: 1,
-      sampleType: "FLOAT32"
+      sampleType: "UINT8"
     }
   };
 }
@@ -436,7 +446,7 @@ function evaluatePixel(sample) {
   // 3 = cloud shadow, 8 = cloud medium probability, 9 = cloud high probability
   // 6 = water, 11 = snow/ice
   if (sample.SCL === 3 || sample.SCL === 8 || sample.SCL === 9 || sample.SCL === 6 || sample.SCL === 11) {
-    return [NaN]; // Mark as invalid
+    return [0]; // Mark as invalid - return 0 (will be filtered out)
   }
   
   // Calculate NDVI: (NIR - Red) / (NIR + Red)
@@ -448,7 +458,11 @@ function evaluatePixel(sample) {
   }
   
   let ndvi = (nir - red) / (nir + red);
-  return [ndvi];
+  
+  // Scale NDVI from [-1, 1] to [0, 255] for UINT8
+  // -1 -> 0, 0 -> 127, 1 -> 255
+  let scaled = Math.floor((ndvi + 1) * 127.5);
+  return [scaled];
 }
 `;
 
@@ -477,8 +491,9 @@ function evaluatePixel(sample) {
             width: 512,
             height: 512,
             responses: [{
+              identifier: 'default',
               format: {
-                type: 'image/tiff'
+                type: 'image/png'
               }
             }]
           },
@@ -487,17 +502,16 @@ function evaluatePixel(sample) {
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': '*/*'
+            'Content-Type': 'application/json'
           },
           responseType: 'arraybuffer',
           timeout: 60000
         }
       );
 
-      // Parse TIFF to extract NDVI values
-      const tiffBuffer = Buffer.from(response.data);
-      const imageBuffer = await sharp(tiffBuffer)
+      // Parse PNG to extract NDVI values
+      const pngBuffer = Buffer.from(response.data);
+      const imageBuffer = await sharp(pngBuffer)
         .raw()
         .toBuffer({ resolveWithObject: true });
 
@@ -512,13 +526,21 @@ function evaluatePixel(sample) {
       let stressedPixels = 0; // NDVI 0-0.3
       let barePixels = 0;     // NDVI < 0
 
-      // Read float32 values
+      // Read UINT8 values and convert back to NDVI [-1, 1]
       for (let i = 0; i < info.width * info.height; i++) {
-        const offset = i * 4; // 4 bytes per float32
-        const ndvi = rawData.readFloatLE(offset);
+        const offset = i * info.channels; // channels per pixel
+        const uint8Value = rawData[offset];
         
-        // Skip invalid values (NaN, infinity, out of range)
-        if (isNaN(ndvi) || !isFinite(ndvi) || ndvi < -1 || ndvi > 1) {
+        // Skip invalid values (0 was used for masked pixels)
+        if (uint8Value === 0) {
+          continue;
+        }
+
+        // Convert back from [0, 255] to [-1, 1]
+        const ndvi = (uint8Value / 127.5) - 1;
+        
+        // Validate range
+        if (ndvi < -1 || ndvi > 1) {
           continue;
         }
 

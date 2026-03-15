@@ -25,20 +25,35 @@ export default function Documents() {
   const { t } = useTranslation();
   const [files, setFiles] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState('');
   const [meta, setMeta] = useState({ 
     documentType: 'Land Documents', 
-    documentName: '' 
+    documentName: '',
+    propertyId: ''
   });
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchDocuments();
+    fetchProperties();
   }, []);
+
+  async function fetchProperties() {
+    try {
+      const res = await api.get('/property');
+      if (res.data?.success) {
+        setProperties(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Fetch properties error:', err);
+    }
+  }
 
   async function fetchDocuments() {
     setLoading(true);
@@ -47,7 +62,7 @@ export default function Documents() {
       if (res.data?.success) setDocuments(res.data.data || []);
     } catch (err) {
       console.error('Fetch docs', err);
-      toast.error('Failed to load documents');
+      toast.error(t('documents.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -66,7 +81,7 @@ export default function Documents() {
         timestamp: new Date().toISOString()
       }));
       
-      toast.success('Document verified! You can now register your property.');
+      toast.success(t('documents.uploadSuccess'));
     }
   };
 
@@ -97,11 +112,11 @@ export default function Documents() {
   async function handleUpload(e) {
     e.preventDefault();
     if (!files || files.length === 0) {
-      toast.error('Please select a file');
+      toast.error(t('documents.selectFile'));
       return;
     }
     if (!meta.documentName) {
-      toast.error('Please provide a document name');
+      toast.error(t('documents.provideName'));
       return;
     }
     
@@ -111,21 +126,24 @@ export default function Documents() {
       formData.append('file', files[0]);
       formData.append('documentType', meta.documentType);
       formData.append('documentName', meta.documentName);
+      if (meta.propertyId) {
+        formData.append('propertyId', meta.propertyId);
+      }
 
       const res = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (res.data?.success) {
-        toast.success('Document uploaded successfully!');
+        toast.success(t('documents.uploadSuccess'));
         setFiles(null);
-        setMeta({ documentType: 'Land Documents', documentName: '' });
+        setMeta({ documentType: 'Land Documents', documentName: '', propertyId: '' });
         if (fileInputRef.current) fileInputRef.current.value = '';
         fetchDocuments();
       }
     } catch (err) {
       console.error('Upload error', err);
-      toast.error(err.response?.data?.message || 'Upload failed');
+      toast.error(err.response?.data?.message || t('documents.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -143,10 +161,10 @@ export default function Documents() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Download started!');
+      toast.success(t('documents.downloadStarted'));
     } catch (err) {
       console.error('Download error', err);
-      toast.error('Failed to download document');
+      toast.error(t('documents.downloadFailed'));
     }
   }
 
@@ -169,7 +187,7 @@ export default function Documents() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-50/30 flex flex-col">
       <Header />
       
       <div className="flex-grow">
@@ -183,7 +201,7 @@ export default function Documents() {
             <h1 className="text-4xl font-bold text-gray-800 mb-2">
               📄 {t('documents.title')}
             </h1>
-            <p className="text-gray-600">Manage all your farm-related documents securely</p>
+            <p className="text-gray-600">{t('documents.subtitle')}</p>
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -201,7 +219,7 @@ export default function Documents() {
                     <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Search documents..."
+                      placeholder={t('documents.searchPlaceholder')}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="input-field pl-10"
@@ -210,7 +228,7 @@ export default function Documents() {
                 </div>
 
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                  Your Documents ({filteredDocuments.length})
+                  {t('documents.yourDocuments')} ({filteredDocuments.length})
                 </h2>
                 
                 {loading ? (
@@ -221,10 +239,10 @@ export default function Documents() {
                   <div className="text-center py-12">
                     <FaFileAlt className="text-6xl text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-600 text-lg">
-                      {searchTerm ? 'No documents found' : 'No documents uploaded yet'}
+                      {searchTerm ? t('documents.noSearchResults') : t('documents.noDocuments')}
                     </p>
                     <p className="text-gray-500 text-sm mt-2">
-                      {searchTerm ? 'Try a different search term' : 'Upload your first document to get started'}
+                      {searchTerm ? t('documents.tryDifferentSearch') : t('documents.noDocumentsDesc')}
                     </p>
                   </div>
                 ) : (
@@ -259,7 +277,7 @@ export default function Documents() {
                                     {isAIVerified && (
                                       <div className="flex items-center space-x-1 bg-green-600 text-white px-2 py-1 rounded-full text-xs">
                                         <FaRobot />
-                                        <span>AI Verified</span>
+                                        <span>{t('documents.aiVerified')}</span>
                                       </div>
                                     )}
                                   </div>
@@ -273,7 +291,7 @@ export default function Documents() {
                                     </div>
                                     {isAIVerified && verificationScore && (
                                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded font-semibold">
-                                        {verificationScore}% Match
+                                        {verificationScore}% {t('documents.match')}
                                       </span>
                                     )}
                                   </div>
@@ -284,7 +302,7 @@ export default function Documents() {
                                 className="btn-primary px-4 py-2 flex items-center space-x-2"
                               >
                                 <FaDownload />
-                                <span className="hidden sm:inline">Download</span>
+                                <span className="hidden sm:inline">{t('documents.download')}</span>
                               </button>
                             </div>
                           </motion.div>
@@ -303,13 +321,13 @@ export default function Documents() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="card bg-gradient-to-br from-blue-600 to-purple-600 text-white sticky top-24"
+                className="card bg-gradient-to-br from-green-500 to-emerald-600 text-white"
               >
                 <div className="flex items-center mb-4">
                   <FaRobot className="text-4xl mr-3" />
                   <div>
-                    <h2 className="text-xl font-bold">AI Document Verification</h2>
-                    <p className="text-sm text-blue-100">Automated fraud prevention</p>
+                    <h2 className="text-xl font-bold">{t('documents.aiVerification')}</h2>
+                    <p className="text-sm text-blue-100">{t('documents.aiSubtitle')}</p>
                   </div>
                 </div>
                 
@@ -317,13 +335,13 @@ export default function Documents() {
                   <div className="flex items-start mb-3">
                     <FaShieldAlt className="text-2xl mr-3 mt-1" />
                     <div>
-                      <h3 className="font-semibold mb-1">How it works:</h3>
+                      <h3 className="font-semibold mb-1">{t('documents.howItWorks')}</h3>
                       <ul className="text-sm space-y-1 text-blue-100">
-                        <li>• Upload land documents (7/12, Survey Doc)</li>
-                        <li>• AI extracts text using OCR</li>
-                        <li>• Validates data automatically</li>
-                        <li>• Auto-approves if match &gt; 85%</li>
-                        <li>• No manual verification needed!</li>
+                        <li>• {t('documents.aiStep1')}</li>
+                        <li>• {t('documents.aiStep2')}</li>
+                        <li>• {t('documents.aiStep3')}</li>
+                        <li>• {t('documents.aiStep4')}</li>
+                        <li>• {t('documents.aiStep5')}</li>
                       </ul>
                     </div>
                   </div>
@@ -334,7 +352,7 @@ export default function Documents() {
                   className="w-full bg-white text-blue-600 font-bold py-4 px-6 rounded-xl hover:shadow-2xl transition-all flex items-center justify-center space-x-2 group"
                 >
                   <FaRobot className="text-2xl group-hover:animate-pulse" />
-                  <span>Start AI Verification</span>
+                  <span>{t('documents.startAIVerification')}</span>
                 </button>
               </motion.div>
 
@@ -347,36 +365,58 @@ export default function Documents() {
               >
                 <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
                   <FaCloudUploadAlt className="mr-2 text-primary-600" />
-                  Manual Upload
+                  {t('documents.manualUpload')}
                 </h2>
                 
                 <form onSubmit={handleUpload} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Document Name *
+                      {t('documents.documentNameLabel')}
                     </label>
                     <input
                       value={meta.documentName}
                       onChange={e => setMeta({ ...meta, documentName: e.target.value })}
                       className="input-field"
-                      placeholder="e.g., Land Ownership Certificate"
+                      placeholder={t('documents.documentNamePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Document Type *
+                      {t('documents.documentTypeLabel')}
                     </label>
                     <select
                       value={meta.documentType}
                       onChange={e => setMeta({ ...meta, documentType: e.target.value })}
                       className="input-field"
                     >
-                      <option>Land Documents</option>
-                      <option>Identity</option>
-                      <option>Insurance</option>
-                      <option>Other</option>
+                      <option>{t('documents.types.landDocs')}</option>
+                      <option>{t('documents.types.identity')}</option>
+                      <option>{t('documents.types.insurance')}</option>
+                      <option>{t('documents.types.other')}</option>
                     </select>
+                  </div>
+
+                  {/* Property Selection Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      📍 Link to Property (Optional)
+                    </label>
+                    <select
+                      value={meta.propertyId}
+                      onChange={e => setMeta({ ...meta, propertyId: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="">Select Property (Optional)</option>
+                      {properties.map(prop => (
+                        <option key={prop._id} value={prop._id}>
+                          {prop.propertyName} - {prop.area?.value || prop.area} {prop.area?.unit || 'hectares'} ({prop.currentCrop || 'No crop'})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Link this document to a specific property for better organization
+                    </p>
                   </div>
 
                   {/* Drag & Drop Zone */}
@@ -395,9 +435,9 @@ export default function Documents() {
                       dragActive ? 'text-primary-600' : 'text-gray-400'
                     }`} />
                     <p className="text-sm text-gray-600 mb-2">
-                      {files ? files[0]?.name : 'Drag & drop file here'}
+                      {files ? files[0]?.name : t('documents.dragDrop')}
                     </p>
-                    <p className="text-xs text-gray-500 mb-3">or</p>
+                    <p className="text-xs text-gray-500 mb-3">{t('documents.or')}</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -409,7 +449,7 @@ export default function Documents() {
                       htmlFor="file-upload"
                       className="btn-outline cursor-pointer inline-block"
                     >
-                      Browse Files
+                      {t('documents.browseFiles')}
                     </label>
                   </div>
 
@@ -421,12 +461,12 @@ export default function Documents() {
                     {uploading ? (
                       <>
                         <div className="spinner w-5 h-5" />
-                        <span>Uploading...</span>
+                        <span>{t('documents.uploading')}</span>
                       </>
                     ) : (
                       <>
                         <FaCloudUploadAlt />
-                        <span>Upload Document</span>
+                        <span>{t('documents.uploadDocument')}</span>
                       </>
                     )}
                   </button>
@@ -442,6 +482,7 @@ export default function Documents() {
         isOpen={verificationModalOpen}
         onClose={() => setVerificationModalOpen(false)}
         onVerificationComplete={handleVerificationComplete}
+        properties={properties}
       />
 
       <Footer />
